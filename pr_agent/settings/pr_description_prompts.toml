@@ -17,7 +17,7 @@ Extra instructions from the user:
 {% endif %}
 
 
-The output must be a YAML object equivalent to type $PRDescription, according to the following Pydantic definitions:
+The output must be a JSON object equivalent to type $PRDescription, according to the following Pydantic definitions:
 =====
 class PRType(str, Enum):
     bug_fix = "Bug fix"
@@ -58,39 +58,30 @@ class PRDescription(BaseModel):
 
 Example output:
 
-```yaml
-type:
-- ...
-- ...
-description: |
-  - ...
-  - ...
-title: |
-  ...
-{%- if enable_pr_diagram %}
-changes_diagram: |
-  ```mermaid
-  flowchart LR
-    ...
-  ```
+```json
+{
+  "type": ["...", "..."],
+  "description": "- ...\n- ...",
+  "title": "..."
+{%- if enable_pr_diagram %},
+  "changes_diagram": "```mermaid\nflowchart LR\n  ...\n```"
 {%- endif %}
-{%- if enable_semantic_files_types %}
-pr_files:
-- filename: |
-    ...
+{%- if enable_semantic_files_types %},
+  "pr_files": [
+    {
+      "filename": "...",
 {%- if include_file_summary_changes %}
-  changes_summary: |
-    ...
+      "changes_summary": "...",
 {%- endif %}
-  changes_title: |
-    ...
-  label: |
-    label_key_1
-...
+      "changes_title": "...",
+      "label": "label_key_1"
+    }
+  ]
 {%- endif %}
+}
 ```
 
-Answer should be a valid YAML, and nothing else. Each YAML output MUST be after a newline, with proper indent, and block scalar indicator ('|')
+Answer should be a valid JSON, and nothing else.
 """
 
 user="""
@@ -146,42 +137,31 @@ Note that lines in the diff body are prefixed with a symbol that represents the 
 
 
 Example output:
-```yaml
-type:
-- Bug fix
-- Refactoring
-- ...
-description: |
-  - ...
-  - ...
-title: |
-  ...
-{%- if enable_pr_diagram %}
-changes_diagram: |
-  ```mermaid
-  flowchart LR
-    ...
-  ```
+```json
+{
+  "type": ["Bug fix", "Refactoring"],
+  "description": "- ...\n- ...",
+  "title": "..."
+{%- if enable_pr_diagram %},
+  "changes_diagram": "```mermaid\nflowchart LR\n  ...\n```"
 {%- endif %}
-{%- if enable_semantic_files_types %}
-pr_files:
-- filename: |
-    ...
+{%- if enable_semantic_files_types %},
+  "pr_files": [
+    {
+      "filename": "...",
 {%- if include_file_summary_changes %}
-  changes_summary: |
-    ...
+      "changes_summary": "...",
 {%- endif %}
-  changes_title: |
-    ...
-  label: |
-    label_key_1
-...
+      "changes_title": "...",
+      "label": "label_key_1"
+    }
+  ]
 {%- endif %}
+}
 ```
 (replace '...' with the actual values)
 {%- endif %}
 
 
-Response (should be a valid YAML, and nothing else):
-```yaml
+Response (should be a valid JSON, and nothing else):
 """
