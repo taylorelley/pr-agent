@@ -93,7 +93,14 @@ def _process_litellm_extra_body(kwargs: dict) -> dict:
     Raises:
         ValueError: If extra_body contains invalid JSON, unsupported keys, or colliding keys
     """
-    allowed_extra_body_keys = {"processing_mode", "service_tier"}
+    allowed_extra_body_keys = {
+        "processing_mode",  # OpenAI Flex Processing
+        "service_tier",      # OpenAI service tier  
+        "response_format",   # Structured output (JSON/YAML) - enables Ollama markdown-free responses
+        "drop_params",       # Ignore unsupported params for model compatibility
+        "max_retries",       # Retry failed requests
+        "timeout",           # Request timeout
+    }
     extra_body = getattr(getattr(get_settings(), "litellm", None), "extra_body", None)
     if extra_body:
         try:
