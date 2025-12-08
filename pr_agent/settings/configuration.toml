@@ -345,6 +345,10 @@ failure_callback = []
 service_callback = []
 # model_id = "" # Optional: Custom inference profile ID for Amazon Bedrock
 
+# Ollama/local LLM support: Force structured output with PRReview schema enforcement
+# Uses GBNF grammars to ensure exact schema compliance (Ollama 0.5+)
+extra_body = '{"response_format":{"type":"json_schema","json_schema":{"name":"PRReview","schema":{"type":"object","properties":{"review":{"type":"object","properties":{"estimated_effort_to_review_[1-5]":{"type":"integer"},"score":{"type":"integer"},"relevant_tests":{"type":"string"},"security_concerns":{"type":"string"},"key_issues_to_review":{"type":"array","items":{"type":"object","properties":{"relevant_file":{"type":"string"},"issue_header":{"type":"string"},"issue_content":{"type":"string"},"start_line":{"type":"integer"},"end_line":{"type":"integer"}}}}},"required":["estimated_effort_to_review_[1-5]","score","relevant_tests","key_issues_to_review","security_concerns"]}},"required":["review"]}}}}'
+
 [pr_similar_issue]
 skip_comments = false
 force_update_dataset = false

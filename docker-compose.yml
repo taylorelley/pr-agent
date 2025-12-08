@@ -1,0 +1,25 @@
+# PR-Agent Docker Compose for Local Ollama
+#
+# Usage:
+#   docker compose run --rm pr-agent --pr_url="https://your-git-host/owner/repo/pulls/1" review
+
+services:
+  pr-agent:
+    image: ghcr.io/tobend/pr-agent:latest
+    container_name: pr-agent
+    environment:
+      # Git Provider (gitea, github, gitlab)
+      - CONFIG.GIT_PROVIDER=gitea
+      
+      # Gitea Configuration
+      - GITEA.URL=https://your-gitea.example.com
+      - GITEA.PERSONAL_ACCESS_TOKEN=${GITEA_TOKEN}
+      
+      # Ollama Configuration
+      - OPENAI.API_BASE=https://your-ollama.example.com/v1
+      - OPENAI.KEY=dummy
+      
+      # Model (codestral:22b works well with json_schema)
+      - CONFIG.MODEL=openai/codestral:22b
+      - CONFIG.CUSTOM_MODEL_MAX_TOKENS=8192
+      - CONFIG.TEMPERATURE=0
