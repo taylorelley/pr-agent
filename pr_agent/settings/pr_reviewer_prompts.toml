@@ -57,7 +57,7 @@ Extra instructions from the user:
 {% endif %}
 
 
-The output must be a YAML object equivalent to type $PRReview, according to the following Pydantic definitions:
+The output must be a JSON object equivalent to type $PRReview, according to the following Pydantic definitions:
 =====
 {%- if require_can_be_split_review %}
 class SubPR(BaseModel):
@@ -133,7 +133,7 @@ class PRReview(BaseModel):
 
 
 Example output:
-```yaml
+```json
 review:
 {%- if related_tickets %}
   ticket_compliance_check:
@@ -192,7 +192,7 @@ review:
 {%- endif %}
 ```
 
-Answer should be a valid YAML, and nothing else. Each YAML output MUST be after a newline, with proper indent, and block scalar indicator ('|')
+Answer should be a valid JSON, and nothing else.
 """
 
 user="""
@@ -271,7 +271,7 @@ The PR code diff:
 
 
 Example output:
-```yaml
+```json
 review:
 {%- if related_tickets %}
   ticket_compliance_check:
@@ -333,6 +333,5 @@ review:
 {%- endif %}
 
 
-Response (should be a valid YAML, and nothing else):
-```yaml
+Response (should be a valid JSON, and nothing else):
 """

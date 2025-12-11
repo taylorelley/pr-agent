@@ -367,6 +367,10 @@ failure_callback = []
 service_callback = []
 # model_id = "" # Optional: Custom inference profile ID for Amazon Bedrock
 
+# Ollama/local LLM support: Force JSON output
+# Uses json_object mode to ensure valid JSON output without enforcing a specific schema globally
+extra_body = '{"response_format":{"type":"json_object"}}'
+
 [pr_similar_issue]
 skip_comments = false
 force_update_dataset = false
