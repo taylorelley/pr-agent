@@ -142,8 +142,8 @@ class ConfigMerger:
 
             except Exception as e:
                 self.logger.exception(
-                    f"Failed to merge config from {config_file.path}: {e}",
-                    extra={"config_path": str(config_file.path), "error": str(e)}
+                    f"Failed to merge config from {config_file.path}",
+                    extra={"config_path": str(config_file.path)}
                 )
                 # Continue with other configs rather than failing completely
                 continue

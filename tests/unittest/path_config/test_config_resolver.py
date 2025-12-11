@@ -199,7 +199,7 @@ extra_instructions = "test"
 
         assert value == 5
 
-    def test_get_effective_setting_with_default(self, temp_repo, resolver):
+    def test_get_effective_setting_with_default(self, resolver):
         """Test getting setting with default value."""
         value = resolver.get_effective_setting(
             "src/main.py",

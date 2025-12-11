@@ -254,9 +254,10 @@ class ConfigResolver:
         try:
             for part in parts:
                 current = current[part]
-            return current
         except (KeyError, TypeError):
             pass
+        else:
+            return current
 
         # Fall back to global settings (also using lowercase for consistency)
         global_value = get_settings().get(setting_path.lower())

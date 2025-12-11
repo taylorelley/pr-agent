@@ -104,6 +104,8 @@ class PRConfig:
             return pr_comment
 
         except Exception as e:
+            # Catch all exceptions to ensure validation errors don't crash the tool
+            # This is appropriate for a user-facing command that should gracefully handle failures
             get_logger().error(f"Configuration validation failed: {e}", exc_info=True)
             message = f"❌ **Configuration Validation Error**\n\n```\n{e!s}\n```"
             if get_settings().config.publish_output:

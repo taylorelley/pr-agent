@@ -133,9 +133,13 @@ class ConfigDiscovery:
         configs: List[ConfigFile] = []
 
         # Start from the file's parent directory
-        # For non-existent files (e.g., new files in PR), is_file() returns False,
-        # so we correctly use the parent of the intended file path
-        current_dir = file_path.parent if file_path.is_file() else file_path
+        # For files and non-existent paths (e.g., new files in PR), use parent
+        # Only use the path itself if it's actually a directory
+        if file_path.is_dir():
+            current_dir = file_path
+        else:
+            # Either a file or doesn't exist - use parent in both cases
+            current_dir = file_path.parent
 
         # Walk up the tree
         depth = 0
@@ -188,7 +192,10 @@ class ConfigDiscovery:
             if config_path.is_file():
                 try:
                     relative_path = config_path.relative_to(self.repo_root)
-                    depth = len(relative_path.parent.parts)
+                    # Depth is number of directory components (excluding the filename)
+                    # Root config has 1 part (filename only) -> depth 0
+                    # src/.pr_agent.toml has 2 parts -> depth 1, etc.
+                    depth = len(relative_path.parts) - 1
 
                     return ConfigFile(
                         path=config_path,
@@ -234,7 +241,8 @@ class ConfigDiscovery:
         # Sort files for consistent hashing
         sorted_files = sorted(changed_files)
         content = '|'.join(sorted_files)
-        return hashlib.md5(content.encode()).hexdigest()
+        # Use SHA-256 for cache key (non-cryptographic use, but avoids security linter warnings)
+        return hashlib.sha256(content.encode()).hexdigest()
 
     def clear_cache(self) -> None:
         """Clear the discovery cache. Useful for testing or long-running processes."""
