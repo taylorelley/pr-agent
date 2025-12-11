@@ -6,10 +6,11 @@ This module implements Task 2.2 from Feature 2: Path-Based Merge Rules
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional
 import tomllib
 import copy
 
+from jinja2.exceptions import SecurityError
 from pr_agent.log import get_logger
 from pr_agent.custom_merge_loader import validate_file_security
 from pr_agent.path_config.config_discovery import ConfigFile
@@ -39,7 +40,7 @@ class ConfigMerger:
     """
 
     # Settings that are allowed to be overridden at subdirectory level
-    DEFAULT_ALLOWED_OVERRIDES = [
+    DEFAULT_ALLOWED_OVERRIDES: ClassVar[List[str]] = [
         "pr_reviewer.extra_instructions",
         "pr_reviewer.num_max_findings",
         "pr_reviewer.require_score_review",
@@ -52,7 +53,7 @@ class ConfigMerger:
     ]
 
     # Settings that should NEVER be overridden at subdirectory level (security)
-    DENIED_OVERRIDES = [
+    DENIED_OVERRIDES: ClassVar[List[str]] = [
         "config.model",
         "config.fallback_models",
         "openai.key",
@@ -140,7 +141,7 @@ class ConfigMerger:
                 )
 
             except Exception as e:
-                self.logger.error(
+                self.logger.exception(
                     f"Failed to merge config from {config_file.path}: {e}",
                     extra={"config_path": str(config_file.path), "error": str(e)}
                 )
@@ -176,10 +177,9 @@ class ConfigMerger:
         # Flatten the config to check all paths
         flat_config = self._flatten_dict(config_data)
 
-        for key_path, value in flat_config.items():
+        for key_path, _value in flat_config.items():
             # Check if this is a denied override
             if any(key_path.startswith(denied) for denied in self.denied_overrides):
-                from jinja2.exceptions import SecurityError
                 raise SecurityError(
                     f"Security error in {config_file.path}: "
                     f"Setting '{key_path}' cannot be overridden in subdirectory configs. "

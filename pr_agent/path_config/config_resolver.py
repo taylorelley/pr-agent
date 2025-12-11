@@ -247,19 +247,19 @@ class ConfigResolver:
         # Get resolved config
         resolved = self.get_config_for_file(file_path)
 
-        # Try to get from resolved config first
-        parts = setting_path.split('.')
+        # Try to get from resolved config first (using lowercase)
+        parts = setting_path.lower().split('.')
         current = resolved.config
 
         try:
             for part in parts:
-                current = current[part.lower()]
+                current = current[part]
             return current
         except (KeyError, TypeError):
             pass
 
-        # Fall back to global settings
-        global_value = get_settings().get(setting_path.upper())
+        # Fall back to global settings (also using lowercase for consistency)
+        global_value = get_settings().get(setting_path.lower())
         if global_value is not None:
             return global_value
 

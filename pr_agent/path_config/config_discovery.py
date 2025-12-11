@@ -20,22 +20,16 @@ CONFIG_FILENAMES = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class ConfigFile:
-    """Represents a discovered configuration file with its metadata."""
+    """
+    Represents a discovered configuration file with its metadata.
+
+    Frozen for immutability since it's used in sets and as cache keys.
+    """
     path: Path
     depth: int  # Depth from repository root (0 = root)
     relative_path: Path  # Relative to repository root
-
-    def __hash__(self):
-        """Make ConfigFile hashable for use in sets."""
-        return hash(self.path)
-
-    def __eq__(self, other):
-        """Equality comparison based on path."""
-        if not isinstance(other, ConfigFile):
-            return False
-        return self.path == other.path
 
 
 class ConfigDiscovery:
@@ -139,6 +133,8 @@ class ConfigDiscovery:
         configs: List[ConfigFile] = []
 
         # Start from the file's parent directory
+        # For non-existent files (e.g., new files in PR), is_file() returns False,
+        # so we correctly use the parent of the intended file path
         current_dir = file_path.parent if file_path.is_file() else file_path
 
         # Walk up the tree

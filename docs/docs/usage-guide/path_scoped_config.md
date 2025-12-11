@@ -38,7 +38,7 @@ Configurations are merged from root to leaf:
 
 ### Example Directory Structure
 
-```
+```text
 my-repo/
 ├── .pr_agent.toml              # Root config
 ├── src/

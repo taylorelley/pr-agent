@@ -296,7 +296,10 @@ num_max_findings = 3
 
         # Should not include tests config
         config_paths = [str(c.relative_path) for c in result.source_configs]
-        assert any("src" in path for path in config_paths) or len(config_paths) == 1
+        # Verify tests config is NOT included
+        assert not any("tests" in path for path in config_paths)
+        # Root config should be applicable
+        assert any(".pr_agent.toml" == path for path in config_paths)
 
     def test_get_config_for_files_disabled(self, temp_repo):
         """Test batch config retrieval when path config is disabled."""
@@ -346,5 +349,5 @@ num_max_findings = 7
             "PR_REVIEWER.NUM_MAX_FINDINGS"
         )
 
-        # Should still find the setting (config system normalizes case)
-        assert value is not None
+        # Should find the setting and return the correct value
+        assert value == 7

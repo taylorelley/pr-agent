@@ -12,6 +12,6 @@ from pr_agent.path_config.config_resolver import ConfigResolver
 __all__ = [
     'ConfigDiscovery',
     'ConfigMerger',
-    'MergeStrategy',
     'ConfigResolver',
+    'MergeStrategy',
 ]

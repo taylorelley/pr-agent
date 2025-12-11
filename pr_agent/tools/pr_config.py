@@ -21,6 +21,7 @@ class PRConfig:
         Args:
             pr_url (str): The URL of the pull request to be reviewed.
             args (list, optional): List of arguments passed to the PRConfig class. Defaults to None.
+            ai_handler: AI handler instance (reserved for future use).
         """
         self.git_provider = get_git_provider()(pr_url)
         self.args = args or []
@@ -75,8 +76,8 @@ class PRConfig:
                 return message
 
             # Get changed files from PR
-            pr_files = await self.git_provider.get_pr_files()
-            changed_files = [file.filename for file in pr_files]
+            diff_files = await self.git_provider.get_diff_files()
+            changed_files = [file.filename for file in diff_files]
 
             # Initialize resolver
             max_depth = get_settings().config.get('path_config_max_depth', 5)
@@ -93,7 +94,7 @@ class PRConfig:
             summary = resolver.get_config_summary(changed_files)
 
             # Prepare response
-            pr_comment = self._prepare_validation_report(issues, summary, changed_files)
+            pr_comment = self._prepare_validation_report(issues, summary)
 
             if get_settings().config.publish_output:
                 get_logger().info('Publishing validation report...')
@@ -104,19 +105,18 @@ class PRConfig:
 
         except Exception as e:
             get_logger().error(f"Configuration validation failed: {e}", exc_info=True)
-            message = f"❌ **Configuration Validation Error**\n\n```\n{str(e)}\n```"
+            message = f"❌ **Configuration Validation Error**\n\n```\n{e!s}\n```"
             if get_settings().config.publish_output:
                 self.git_provider.publish_comment(message)
             return message
 
-    def _prepare_validation_report(self, issues, summary, changed_files):
+    def _prepare_validation_report(self, issues, summary):
         """
         Prepare a markdown report for configuration validation.
 
         Args:
             issues: List of validation issues
             summary: Configuration summary dictionary
-            changed_files: List of changed file paths
 
         Returns:
             Markdown formatted validation report
