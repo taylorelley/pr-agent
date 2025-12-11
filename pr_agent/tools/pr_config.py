@@ -1,13 +1,18 @@
+from pathlib import Path
 from dynaconf import Dynaconf
 
-from pr_agent.config_loader import get_settings
+from pr_agent.config_loader import get_settings, _find_repository_root
 from pr_agent.git_providers import get_git_provider
 from pr_agent.log import get_logger
 
 
 class PRConfig:
     """
-    The PRConfig class is responsible for listing all configuration options available for the user.
+    The PRConfig class is responsible for listing and validating configuration options.
+
+    Supports commands:
+    - /config (or /settings): List all configurations
+    - /config validate: Validate path-scoped configurations
     """
     def __init__(self, pr_url: str, args=None, ai_handler=None):
         """
@@ -15,11 +20,17 @@ class PRConfig:
 
         Args:
             pr_url (str): The URL of the pull request to be reviewed.
-            args (list, optional): List of arguments passed to the PRReviewer class. Defaults to None.
+            args (list, optional): List of arguments passed to the PRConfig class. Defaults to None.
         """
         self.git_provider = get_git_provider()(pr_url)
+        self.args = args or []
 
     async def run(self):
+        # Check if this is a validate command
+        if self.args and 'validate' in [arg.lower() for arg in self.args]:
+            return await self._run_validate()
+
+        # Default behavior: list configurations
         get_logger().info('Getting configuration settings...')
         get_logger().info('Preparing configs...')
         pr_comment = self._prepare_pr_configs()
@@ -28,6 +39,134 @@ class PRConfig:
             self.git_provider.publish_comment(pr_comment)
             self.git_provider.remove_initial_comment()
         return ""
+
+    async def _run_validate(self):
+        """
+        Validate path-scoped configuration files for the PR.
+
+        This command:
+        1. Discovers all .pr_agent.toml files in the repository
+        2. Validates security constraints
+        3. Checks for configuration conflicts
+        4. Reports effective configuration per path
+        """
+        get_logger().info('Validating path-scoped configurations...')
+
+        # Check if path-based config is enabled
+        if not get_settings().config.get('path_config_enabled', False):
+            message = "⚠️ **Path-Scoped Configuration Validation**\n\n"
+            message += "Path-based configuration is currently disabled.\n"
+            message += "Enable it by setting `config.path_config_enabled = true` in your configuration."
+
+            if get_settings().config.publish_output:
+                self.git_provider.publish_comment(message)
+            return message
+
+        try:
+            from pr_agent.path_config import ConfigResolver
+
+            # Find repository root
+            repo_root = _find_repository_root()
+            if not repo_root:
+                message = "❌ **Configuration Validation Failed**\n\n"
+                message += "Could not find repository root (no .git directory found)."
+                if get_settings().config.publish_output:
+                    self.git_provider.publish_comment(message)
+                return message
+
+            # Get changed files from PR
+            pr_files = await self.git_provider.get_pr_files()
+            changed_files = [file.filename for file in pr_files]
+
+            # Initialize resolver
+            max_depth = get_settings().config.get('path_config_max_depth', 5)
+            resolver = ConfigResolver(
+                repo_root=repo_root,
+                max_depth=max_depth,
+                enable_path_config=True
+            )
+
+            # Validate configurations
+            issues = resolver.validate_all_configs(changed_files)
+
+            # Get configuration summary
+            summary = resolver.get_config_summary(changed_files)
+
+            # Prepare response
+            pr_comment = self._prepare_validation_report(issues, summary, changed_files)
+
+            if get_settings().config.publish_output:
+                get_logger().info('Publishing validation report...')
+                self.git_provider.publish_comment(pr_comment)
+                self.git_provider.remove_initial_comment()
+
+            return pr_comment
+
+        except Exception as e:
+            get_logger().error(f"Configuration validation failed: {e}", exc_info=True)
+            message = f"❌ **Configuration Validation Error**\n\n```\n{str(e)}\n```"
+            if get_settings().config.publish_output:
+                self.git_provider.publish_comment(message)
+            return message
+
+    def _prepare_validation_report(self, issues, summary, changed_files):
+        """
+        Prepare a markdown report for configuration validation.
+
+        Args:
+            issues: List of validation issues
+            summary: Configuration summary dictionary
+            changed_files: List of changed file paths
+
+        Returns:
+            Markdown formatted validation report
+        """
+        report = "## 🔍 Path-Scoped Configuration Validation\n\n"
+
+        # Overall status
+        if not issues:
+            report += "✅ **All configurations are valid!**\n\n"
+        else:
+            report += f"⚠️ **Found {len(issues)} validation issue(s)**\n\n"
+
+        # Summary section
+        report += "<details>\n<summary><strong>Configuration Summary</strong></summary>\n\n"
+        report += "```yaml\n"
+        report += f"Path Config Enabled: {summary['path_config_enabled']}\n"
+        report += f"Repository Root: {summary['repo_root']}\n"
+        report += f"Max Depth: {summary['max_depth']}\n"
+        report += f"Changed Files: {summary['changed_files_count']}\n"
+        report += f"Discovered Configs: {len(summary['discovered_configs'])}\n"
+        report += "```\n"
+        report += "</details>\n\n"
+
+        # Discovered configs
+        if summary['discovered_configs']:
+            report += "<details>\n<summary><strong>Discovered Configuration Files</strong></summary>\n\n"
+            report += "| File | Depth |\n"
+            report += "|------|-------|\n"
+            for config in summary['discovered_configs']:
+                report += f"| `{config['path']}` | {config['depth']} |\n"
+            report += "\n</details>\n\n"
+
+        # Issues section
+        if issues:
+            report += "### ❌ Validation Issues\n\n"
+            for i, issue in enumerate(issues, 1):
+                report += f"**Issue {i}:** `{issue['file']}`\n"
+                report += f"- **Type:** {issue['type']}\n"
+                report += f"- **Details:** {issue['message']}\n\n"
+
+        # Recommendations
+        report += "<details>\n<summary><strong>Configuration Best Practices</strong></summary>\n\n"
+        report += "1. ✅ Only override allowed settings in subdirectory configs\n"
+        report += "2. ✅ Never commit API keys or secrets in config files\n"
+        report += "3. ✅ Use `_merge_strategy` directive to control merge behavior\n"
+        report += "4. ✅ Keep subdirectory configs focused on path-specific overrides\n"
+        report += "5. ✅ Document why each subdirectory config is needed\n"
+        report += "\n</details>\n"
+
+        return report
 
     def _prepare_pr_configs(self) -> str:
         try:
