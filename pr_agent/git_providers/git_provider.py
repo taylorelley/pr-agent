@@ -401,6 +401,36 @@ class GitProvider(ABC):
         except Exception as e:
             return -1
 
+    #### check status operations ####
+    def create_check_run(self, name: str, status: str, conclusion: str = None, output: dict = None) -> Optional[str]:
+        """
+        Create a check run for the PR.
+
+        Args:
+            name: Name of the check
+            status: Status of the check ("queued", "in_progress", "completed")
+            conclusion: Conclusion of check (only when status="completed"):
+                       "success", "failure", "neutral", "cancelled", "skipped", "timed_out", "action_required"
+            output: Output dict with title, summary, and optionally text and annotations
+
+        Returns:
+            Check run ID if supported, None otherwise
+        """
+        get_logger().debug(f"Check runs not supported for this provider: {self.__class__.__name__}")
+        return None
+
+    def update_check_run(self, check_id: str, status: str, conclusion: str = None, output: dict = None):
+        """
+        Update an existing check run.
+
+        Args:
+            check_id: ID of the check run to update
+            status: New status
+            conclusion: New conclusion (only when status="completed")
+            output: New output dict
+        """
+        get_logger().debug(f"Check runs not supported for this provider: {self.__class__.__name__}")
+
     def limit_output_characters(self, output: str, max_chars: int):
         return output[:max_chars] + '...' if len(output) > max_chars else output
 
