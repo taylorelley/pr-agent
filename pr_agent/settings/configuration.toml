@@ -52,6 +52,14 @@ temperature=0.2
 # bring repo metadata 💎
 add_repo_metadata=false # if true, will try to add metadata from files like 'AGENTS.MD', 'CLAUDE.MD', 'QODO.MD'
 add_repo_metadata_file_list =["AGENTS.MD", "CLAUDE.MD", "QODO.MD"]
+# Feature 2: Path-Scoped Configuration System
+path_config_enabled = false  # Enable path-based configuration merging
+path_config_max_depth = 5  # Maximum depth for config file discovery
+path_config_allowed_overrides = [
+    "pr_reviewer.extra_instructions",
+    "pr_reviewer.num_max_findings",
+    "pr_code_suggestions.extra_instructions"
+]
 # ignore logic
 ignore_pr_title = ["^\\[Auto\\]", "^Auto"] # a list of regular expressions to match against the PR title to ignore the PR agent
 ignore_pr_target_branches = [] # a list of regular expressions of target branches to ignore from PR agent when an PR is created
@@ -112,6 +120,10 @@ final_update_message = true
 enable_help_text=false
 enable_help_comment=false
 enable_pr_diagram=true # adds a section with a diagram of the PR changes
+# Feature 3: Expanded Diagram Generation
+diagram_types = ["change_flow"]  # Types of diagrams to generate: "change_flow", "component", "data_flow"
+diagram_max_nodes = 20  # Maximum nodes in a diagram
+diagram_collapse_threshold = 10  # Collapse diagram sections with more than this many nodes
 # describe as comment
 publish_description_as_comment=false
 publish_description_as_comment_persistent=true
@@ -132,6 +144,11 @@ async_ai_calls=true
 [pr_questions] # /ask #
 enable_help_text=false
 use_conversation_history=true
+# Feature 5: Conversational PR Interaction (opt-in)
+max_history_messages = 10  # Maximum number of conversation history messages to keep
+max_history_tokens = 4000  # Maximum tokens for conversation history
+enable_follow_up_suggestions = false  # Generate follow-up question suggestions
+enable_threaded_responses = true  # Reply in same thread when possible
 
 
 [pr_code_suggestions] # /improve #
@@ -214,12 +231,17 @@ extra_instructions = ""
 file = ""              # in case there are several components with the same name, you can specify the relevant file
 class_name = ""        # in case there are several methods with the same name in the same file, you can specify the relevant class name
 
-[checks] # /checks (pro feature) #
+[checks] # /checks - Pre-merge check engine #
+# Legacy pro feature settings
 enable_auto_checks_feedback=true
 excluded_checks_list=["lint"] # list of checks to exclude, for example: ["check1", "check2"]
 persistent_comment=true
 enable_help_text=true
 final_update_message = false
+# Feature 1: New check engine settings (opt-in, disabled by default)
+enable_auto_checks = false  # Enable automatic check execution on PR events
+default_mode = "advisory"  # Default mode for checks: "advisory" or "blocking"
+parallel_execution = true  # Execute checks in parallel where possible
 
 [pr_help] # /help #
 force_local_db=false
@@ -394,3 +416,43 @@ pr_commands = [
     "/review",
     "/improve",
 ]
+
+# ============================================================================
+# Feature Configurations for CodeRabbit Feature Parity
+# ============================================================================
+
+[incremental_review] # Feature 4: Improved Incremental Review Engine
+enabled = false  # Enable stateful incremental reviews (opt-in)
+state_store = "file"  # Storage backend: "file", "git_notes", "redis"
+state_file_path = ".pr_agent_state/"  # Path for file-based state storage
+persist_resolved_findings = true  # Keep history of resolved findings
+finding_expiry_days = 30  # Days to keep resolved findings in history
+auto_invalidate_findings = true  # Auto-invalidate findings when code changes
+
+[incremental_review.redis]
+# Redis configuration (only used if state_store = "redis")
+url = "redis://localhost:6379"
+prefix = "pr_agent:"
+ttl = 2592000  # 30 days in seconds
+
+[feedback] # Feature 6: Learning From Feedback
+enabled = false  # Enable feedback logging and learning (opt-in)
+storage = "local"  # Storage type: "local", "database"
+storage_path = ".pr_agent_feedback/"  # Path for local feedback storage
+aggregate_to_org = false  # Aggregate preferences at org level
+min_samples_for_preference = 5  # Minimum feedback events to create a preference
+
+[feedback.privacy]
+anonymize_code = true  # Anonymize code snippets in feedback logs
+retention_days = 90  # Days to retain feedback data
+allow_export = true  # Allow users to export their feedback data
+
+[dashboard] # Feature 7: Optional Org-Level Dashboard
+enabled = false  # Enable dashboard (opt-in)
+database_url = "sqlite:///.pr_agent_metrics.db"  # Database URL for metrics
+api_port = 8080  # Port for dashboard API server
+static_files_path = "./dashboard/static"  # Path to static dashboard files
+
+[dashboard.auth]
+enabled = false  # Enable authentication for dashboard
+method = "basic"  # Authentication method: "basic", "oauth"
