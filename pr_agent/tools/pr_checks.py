@@ -37,7 +37,7 @@ class PRChecks:
     def __init__(
         self,
         pr_url: str,
-        args: list = None,
+        args: Optional[list] = None,
         ai_handler: partial[BaseAiHandler] = LiteLLMAIHandler
     ):
         """
@@ -125,7 +125,7 @@ class PRChecks:
                     checks.append(check)
 
         except Exception as e:
-            self.logger.error(f"Failed to load checks from config: {e}")
+            self.logger.exception(f"Failed to load checks from config: {e}")
 
         return checks
 
@@ -232,12 +232,7 @@ class PRChecks:
         pr_labels = []
         try:
             labels_obj = self.git_provider.get_pr_labels()
-            if labels_obj:
-                # Labels may be objects with 'name' attribute or strings
-                pr_labels = [
-                    label.get("name", "") if isinstance(label, dict) else getattr(label, 'name', str(label))
-                    for label in labels_obj
-                ]
+            pr_labels = labels_obj if labels_obj else []
         except Exception as e:
             self.logger.debug(f"Could not retrieve PR labels: {e}")
 
@@ -251,7 +246,7 @@ class PRChecks:
             files_changed=files_changed,
             patches=patches,
             git_provider=self.git_provider,
-            config=get_settings().to_dict()
+            config=get_settings().as_dict()
         )
 
         return context
@@ -403,4 +398,4 @@ class PRChecks:
                 self.git_provider.publish_comment(comment)
 
         except Exception as e:
-            self.logger.error(f"Failed to publish comment: {e}")
+            self.logger.exception(f"Failed to publish comment: {e}")

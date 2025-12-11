@@ -7,10 +7,18 @@ Provides commonly-needed check types that can be configured
 via TOML without writing custom code.
 """
 
+import fnmatch
 import re
 import json
-from typing import Optional, Literal
+from typing import Optional, Literal, ClassVar
 from functools import partial
+
+try:
+    from jinja2 import Template
+    JINJA2_AVAILABLE = True
+except ImportError:
+    JINJA2_AVAILABLE = False
+    Template = None
 
 from pr_agent.checks.base_check import BaseCheck
 from pr_agent.checks.check_context import CheckContext
@@ -112,6 +120,13 @@ class FreeTextRuleCheck(BaseCheck):
 
     async def run(self, context: CheckContext) -> CheckResult:
         """Evaluate the rule using AI."""
+        if not JINJA2_AVAILABLE:
+            return CheckResult(
+                passed=False,
+                message="FreeTextRuleCheck requires jinja2: pip install jinja2",
+                severity="error"
+            )
+
         if not context.filtered_files:
             return CheckResult(
                 passed=True,
@@ -121,7 +136,6 @@ class FreeTextRuleCheck(BaseCheck):
 
         try:
             # Build prompt from template
-            from jinja2 import Template
 
             # Get relevant patches for filtered files
             relevant_patches = [
@@ -175,7 +189,7 @@ class FreeTextRuleCheck(BaseCheck):
             )
 
         except Exception as e:
-            self.logger.error(f"FreeTextRuleCheck failed: {e}")
+            self.logger.exception(f"FreeTextRuleCheck failed: {e}")
             return CheckResult(
                 passed=False,
                 message=f"Check execution error: {str(e)}",
@@ -215,13 +229,13 @@ class PatternCheck(BaseCheck):
             exclude_paths: File patterns to exclude
         """
         super().__init__(name, description, mode, paths, exclude_paths)
+        self.logger = get_logger()
 
         # Compile regex pattern with proper error handling
         try:
             self.pattern = re.compile(pattern)
         except re.error as e:
-            self.logger = get_logger()
-            self.logger.error(f"Invalid regex pattern '{pattern}': {e}")
+            self.logger.exception(f"Invalid regex pattern '{pattern}': {e}")
             raise ValueError(
                 f"Invalid regex pattern for check '{name}': '{pattern}'. "
                 f"Regex error: {e}"
@@ -229,7 +243,6 @@ class PatternCheck(BaseCheck):
 
         self.message_template = message
         self.invert = invert
-        self.logger = get_logger()
 
     async def run(self, context: CheckContext) -> CheckResult:
         """Search for pattern in changed files."""
@@ -337,7 +350,7 @@ class FileSizeCheck(BaseCheck):
             total_lines += lines_changed
 
             # Check file size if limit is set
-            if self.max_file_size_kb:
+            if self.max_file_size_kb is not None:
                 # Estimate file size from patch (not perfect but reasonable)
                 # In a real implementation, you'd fetch actual file size from git provider
                 patch_size_kb = len(patch.patch.encode('utf-8')) / 1024
@@ -349,7 +362,7 @@ class FileSizeCheck(BaseCheck):
                     ))
 
         # Check total PR lines if limit is set
-        if self.max_pr_lines and total_lines > self.max_pr_lines:
+        if self.max_pr_lines is not None and total_lines > self.max_pr_lines:
             details.append(CheckDetail(
                 file_path="PR",
                 message=f"Total lines changed ({total_lines}) exceeds limit ({self.max_pr_lines})"
@@ -412,7 +425,6 @@ class RequiredFilesCheck(BaseCheck):
         changed_files = set(context.files_changed)
 
         # Check if any trigger files were modified
-        import fnmatch
         trigger_matched = any(
             any(fnmatch.fnmatch(f, pattern) for pattern in self.trigger_files)
             for f in changed_files
@@ -469,7 +481,7 @@ class ForbiddenPatternsCheck(BaseCheck):
     """
 
     # Common secret patterns (basic set - extend as needed)
-    DEFAULT_PATTERNS = [
+    DEFAULT_PATTERNS: ClassVar[list[tuple[str, str]]] = [
         (r'(?i)(api[_-]?key|apikey)\s*[=:]\s*["\']?[a-z0-9]{20,}', "API key detected"),
         (r'(?i)(password|passwd|pwd)\s*[=:]\s*["\']?[^\s]{8,}', "Hardcoded password detected"),
         (r'(?i)(secret|token)\s*[=:]\s*["\']?[a-z0-9_\-]{20,}', "Secret/token detected"),
