@@ -1189,6 +1189,75 @@ class GithubProvider(GitProvider):
                 get_logger().error(f"Failed to process patch for committable comment, error: {e}")
         return code_suggestions_copy
 
+    #### check status operations ####
+    def create_check_run(self, name: str, status: str, conclusion: str = None, output: dict = None) -> Optional[str]:
+        """
+        Create a check run using GitHub Checks API.
+
+        See: https://docs.github.com/en/rest/checks/runs
+        """
+        try:
+            # Build check run data
+            check_data = {
+                "name": name,
+                "head_sha": self.pr.head.sha,
+                "status": status,
+            }
+
+            if conclusion:
+                check_data["conclusion"] = conclusion
+
+            if output:
+                check_data["output"] = {
+                    "title": output.get("title", name),
+                    "summary": output.get("summary", ""),
+                }
+                if "text" in output:
+                    check_data["output"]["text"] = output["text"]
+                if "annotations" in output:
+                    check_data["output"]["annotations"] = output["annotations"]
+
+            # Create the check run
+            check_run = self.github_client.get_repo(self.repo).create_check_run(**check_data)
+
+            get_logger().info(f"Created check run '{name}' with ID {check_run.id}")
+            return str(check_run.id)
+
+        except Exception as e:
+            get_logger().error(f"Failed to create check run: {e}")
+            return None
+
+    def update_check_run(self, check_id: str, status: str, conclusion: str = None, output: dict = None):
+        """
+        Update an existing check run.
+        """
+        try:
+            check_run = self.github_client.get_repo(self.repo).get_check_run(int(check_id))
+
+            # Build update data
+            update_data = {"status": status}
+
+            if conclusion:
+                update_data["conclusion"] = conclusion
+
+            if output:
+                update_data["output"] = {
+                    "title": output.get("title", check_run.name),
+                    "summary": output.get("summary", ""),
+                }
+                if "text" in output:
+                    update_data["output"]["text"] = output["text"]
+                if "annotations" in output:
+                    update_data["output"]["annotations"] = output["annotations"]
+
+            # Update the check run
+            check_run.edit(**update_data)
+
+            get_logger().info(f"Updated check run ID {check_id}")
+
+        except Exception as e:
+            get_logger().error(f"Failed to update check run: {e}")
+
     #Clone related
     def _prepare_clone_url_with_token(self, repo_url_to_clone: str) -> str | None:
         scheme = "https://"

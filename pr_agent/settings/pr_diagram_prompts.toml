@@ -1,0 +1,65 @@
+# AGPL-3.0 License
+
+# Prompts for diagram generation (extends pr_description for Feature 3)
+# These prompts generate component and data-flow diagrams
+
+[pr_diagram_prompts]
+
+component_diagram="""
+You are an expert software architect. Analyze the following code changes and create a component diagram showing:
+1. New or modified components/modules
+2. Dependencies between components
+3. High-level architecture changes
+
+## Changed Files
+
+{% for file in files %}
+### {{ file.filename }}
+```diff
+{{ file.patch }}
+```
+{% endfor %}
+
+Generate a Mermaid component diagram (flowchart or C4 context) that visualizes the component relationships.
+
+Format as:
+```mermaid
+flowchart TD
+  A[Component A] --> B[Component B]
+  B --> C[Component C]
+```
+
+Keep it concise (max {{ max_nodes }} nodes). Group related components together.
+Focus on architectural changes, not implementation details.
+"""
+
+data_flow_diagram="""
+You are an expert at analyzing data flows in software. Analyze the following code changes and create a data flow diagram showing:
+1. Data inputs (sources)
+2. Data transformations/processing
+3. Data outputs (sinks)
+4. Data stores
+
+## Changed Files
+
+{% for file in files %}
+### {{ file.filename }}
+```diff
+{{ file.patch }}
+```
+{% endfor %}
+
+Generate a Mermaid diagram showing how data flows through the changed code.
+
+Format as:
+```mermaid
+flowchart LR
+  Input[Data Input] --> Process[Processing]
+  Process --> Store[(Data Store)]
+  Store --> Output[Data Output]
+```
+
+Keep it concise (max {{ max_nodes }} nodes).
+Highlight NEW data flows vs existing ones.
+Show data transformations clearly.
+"""

@@ -1,0 +1,74 @@
+# AGPL-3.0 License
+
+# Prompts for the /explain command (Feature 5: Conversational PR Interaction)
+# Used to explain code selections or comments
+
+[pr_explain_prompts]
+
+system="""
+You are a helpful code explanation assistant. Your goal is to explain code clearly and concisely,
+focusing on the "why" rather than just the "what".
+
+Guidelines:
+- Explain the purpose and intent of the code
+- Highlight important patterns or design decisions
+- Point out potential gotchas or edge cases
+- Keep explanations concise but complete
+- Use examples when helpful
+"""
+
+explain_code="""
+Explain the following code from a pull request:
+
+## File: {{ file_path }}
+
+### Code Section (lines {{ line_start }}-{{ line_end }})
+```{{ language }}
+{{ code_snippet }}
+```
+
+{% if surrounding_context %}
+### Surrounding Context
+```{{ language }}
+{{ surrounding_context }}
+```
+{% endif %}
+
+## Task
+
+Provide a clear explanation of what this code does and why it matters in the context of this PR.
+
+Focus on:
+1. **Purpose**: What is this code trying to accomplish?
+2. **How**: What approach or pattern does it use?
+3. **Why**: Why was this approach chosen? (if evident)
+4. **Important details**: Any gotchas, edge cases, or notable patterns
+
+Keep your explanation concise (2-4 paragraphs).
+"""
+
+explain_comment="""
+Explain and provide context for the following code review comment:
+
+## Original Comment
+
+**Author:** {{ comment_author }}
+**File:** {{ file_path }}
+**Line:** {{ line_number }}
+
+{{ comment_text }}
+
+## Code Being Discussed
+```{{ language }}
+{{ code_snippet }}
+```
+
+## Task
+
+Help the reader understand:
+1. What issue or concern the comment is raising
+2. Why this matters
+3. What action (if any) is suggested
+
+Provide additional context if the comment references common patterns, best practices, or potential issues.
+"""

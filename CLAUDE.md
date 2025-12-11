@@ -17,7 +17,7 @@ This document provides Claude-specific guidance and quick references.
 
 **PR-Agent** is an AI-powered code review and PR management tool supporting 40+ AI models across GitHub, GitLab, Bitbucket, Azure DevOps, Gitea, and Gerrit. It's a Python 3.12+ application using FastAPI, LiteLLM, and Dynaconf with an AGPL-3.0 license.
 
-**Note:** This is the legacy open-source version. Qodo Merge is the next-generation product with advanced features.
+**Important:** This is a **community-maintained fork** of the original open-source PR-Agent. The original project by Qodo (formerly CodiumAI) is no longer actively maintained as they have shifted focus to their commercial product, Qodo Merge. This fork continues development of the open-source version with new features, improvements, and community-driven enhancements.
 
 ## Quick Reference
 
