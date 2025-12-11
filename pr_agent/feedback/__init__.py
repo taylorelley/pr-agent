@@ -1,5 +1,4 @@
 # AGPL-3.0 License
-# Copyright (c) Qodo Ltd.
 
 """
 Feedback learning system for PR-Agent.

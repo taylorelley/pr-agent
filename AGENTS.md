@@ -2,7 +2,11 @@
 
 ## Project Overview
 
-**PR-Agent** is an open-source AI-powered tool for efficiently reviewing and handling pull requests. Originally created by Qodo (formerly CodiumAI), it provides automated code review, PR descriptions, code suggestions, and various other tools to streamline the PR workflow across multiple git platforms.
+**PR-Agent** is an open-source AI-powered tool for efficiently reviewing and handling pull requests.
+
+**Important Notice:** This is a **community-maintained fork** of the original PR-Agent project. The original project was created by Qodo (formerly CodiumAI), but is no longer actively maintained as an open-source project. Qodo has shifted focus to their commercial product, Qodo Merge. This fork continues development of the open-source version with new features, improvements, and community support.
+
+This fork provides automated code review, PR descriptions, code suggestions, and various other tools to streamline the PR workflow across multiple git platforms.
 
 **Key Capabilities:**
 - `/review` - AI-powered PR review with security analysis, effort estimates, and suggestions
@@ -406,7 +410,7 @@ Types:
 
 - This repository uses PR-Agent itself! The configuration at line 53-54 in `pr_agent/settings/configuration.toml` shows that PR-Agent can read AGENTS.MD and CLAUDE.MD files
 - Always respect the AGPL-3.0 license when suggesting code
-- The project is in "legacy status" - Qodo Merge is the next-generation product
+- This is a community-maintained fork - the original Qodo project is no longer actively maintained as open source
 - Focus on code quality over speed - this is a production tool used by many teams
 - When in doubt, check the extensive documentation in `docs/docs/`
 - Test thoroughly - bugs in code review tools can be particularly impactful

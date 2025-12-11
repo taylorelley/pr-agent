@@ -1,5 +1,4 @@
 # AGPL-3.0 License
-# Copyright (c) Qodo Ltd.
 
 # Prompts for the pre-merge check engine (/checks command)
 # These prompts are used to evaluate free-text rules defined in check configurations

@@ -1,5 +1,4 @@
 # AGPL-3.0 License
-# Copyright (c) Qodo Ltd.
 
 """
 Feedback event types and data structures.

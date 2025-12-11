@@ -1,5 +1,4 @@
 # AGPL-3.0 License
-# Copyright (c) Qodo Ltd.
 
 """
 Organization-level dashboard for PR-Agent.

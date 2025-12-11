@@ -1,5 +1,4 @@
 # AGPL-3.0 License
-# Copyright (c) Qodo Ltd.
 
 # Prompts for diagram generation (extends pr_description for Feature 3)
 # These prompts generate component and data-flow diagrams
