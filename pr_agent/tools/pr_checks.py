@@ -212,20 +212,42 @@ class PRChecks:
 
     async def _build_check_context(self) -> CheckContext:
         """Build context for check execution."""
-        # Get PR data
-        pr_info = await self.git_provider.get_pr()
-
         # Get diff files
         patches = await get_pr_diff(self.git_provider, self.git_provider.incremental)
         files_changed = [p.filename for p in patches]
 
+        # Extract PR data from git provider
+        # Use hasattr checks for safety across different provider implementations
+        pr_title = ""
+        if hasattr(self.git_provider, 'pr') and self.git_provider.pr:
+            pr_title = getattr(self.git_provider.pr, 'title', "")
+
+        pr_author = ""
+        if hasattr(self.git_provider, 'pr') and self.git_provider.pr:
+            user = getattr(self.git_provider.pr, 'user', None)
+            if user:
+                pr_author = getattr(user, 'login', "")
+
+        # Get labels using the provider's accessor method
+        pr_labels = []
+        try:
+            labels_obj = self.git_provider.get_pr_labels()
+            if labels_obj:
+                # Labels may be objects with 'name' attribute or strings
+                pr_labels = [
+                    label.get("name", "") if isinstance(label, dict) else getattr(label, 'name', str(label))
+                    for label in labels_obj
+                ]
+        except Exception as e:
+            self.logger.debug(f"Could not retrieve PR labels: {e}")
+
         # Build context
         context = CheckContext(
             pr_url=self.pr_url,
-            pr_title=pr_info.get("title", ""),
+            pr_title=pr_title,
             pr_description=self.git_provider.get_pr_description(),
-            pr_author=pr_info.get("user", {}).get("login", ""),
-            pr_labels=[label.get("name", "") for label in pr_info.get("labels", [])],
+            pr_author=pr_author,
+            pr_labels=pr_labels,
             files_changed=files_changed,
             patches=patches,
             git_provider=self.git_provider,

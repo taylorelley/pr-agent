@@ -21,6 +21,60 @@ from pr_agent.config_loader import get_settings
 from pr_agent.log import get_logger
 
 
+def parse_patch_lines_with_numbers(patch: str) -> list[tuple[str, Optional[int]]]:
+    """
+    Parse patch and return list of (line_content, actual_line_number) tuples.
+
+    Uses hunk headers to map patch lines to actual file line numbers.
+    Only added lines (+) and context lines ( ) have line numbers.
+    Deleted lines (-) have None as their line number.
+
+    Args:
+        patch: The patch string to parse
+
+    Returns:
+        List of tuples: (line_content, line_number_in_new_file or None)
+    """
+    result = []
+    lines = patch.split('\n')
+
+    # Regex to match hunk headers: @@ -start1,size1 +start2,size2 @@ optional_context
+    hunk_header_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))?\ @@")
+
+    current_line_number = None
+
+    for line in lines:
+        # Check if this is a hunk header
+        match = hunk_header_re.match(line)
+        if match:
+            # Extract start line in new file (start2)
+            start2 = int(match.group(3))
+            current_line_number = start2
+            result.append((line, None))  # Hunk header has no line number
+            continue
+
+        if current_line_number is None:
+            # Before first hunk header or in file header
+            result.append((line, None))
+            continue
+
+        # Determine line type and track line number
+        if line.startswith('+'):
+            # Added line - has a line number
+            result.append((line, current_line_number))
+            current_line_number += 1
+        elif line.startswith('-'):
+            # Deleted line - no line number in new file
+            result.append((line, None))
+            # Don't increment line number for deleted lines
+        else:
+            # Context line (starts with space or empty)
+            result.append((line, current_line_number))
+            current_line_number += 1
+
+    return result
+
+
 class FreeTextRuleCheck(BaseCheck):
     """
     AI-powered check that evaluates code against a custom rule.
@@ -161,7 +215,18 @@ class PatternCheck(BaseCheck):
             exclude_paths: File patterns to exclude
         """
         super().__init__(name, description, mode, paths, exclude_paths)
-        self.pattern = re.compile(pattern)
+
+        # Compile regex pattern with proper error handling
+        try:
+            self.pattern = re.compile(pattern)
+        except re.error as e:
+            self.logger = get_logger()
+            self.logger.error(f"Invalid regex pattern '{pattern}': {e}")
+            raise ValueError(
+                f"Invalid regex pattern for check '{name}': '{pattern}'. "
+                f"Regex error: {e}"
+            ) from e
+
         self.message_template = message
         self.invert = invert
         self.logger = get_logger()
@@ -181,12 +246,15 @@ class PatternCheck(BaseCheck):
             if patch.filename not in context.filtered_files:
                 continue
 
+            # Parse patch to get actual line numbers
+            lines_with_numbers = parse_patch_lines_with_numbers(patch.patch)
+
             # Search in patch content
-            for i, line in enumerate(patch.patch.split('\n'), 1):
-                if self.pattern.search(line):
+            for line_content, line_number in lines_with_numbers:
+                if self.pattern.search(line_content):
                     details.append(CheckDetail(
                         file_path=patch.filename,
-                        line_number=i,
+                        line_number=line_number,  # Actual file line number or None
                         message=self.message_template
                     ))
 
@@ -431,20 +499,36 @@ class ForbiddenPatternsCheck(BaseCheck):
             exclude_paths: File patterns to exclude (e.g., ["**/*.env.example"])
         """
         super().__init__(name, description, mode, paths, exclude_paths)
-
-        # Compile all patterns
-        self.patterns = [
-            (re.compile(pattern), message)
-            for pattern, message in self.DEFAULT_PATTERNS
-        ]
-
-        if custom_patterns:
-            self.patterns.extend([
-                (re.compile(pattern), message)
-                for pattern, message in custom_patterns
-            ])
-
         self.logger = get_logger()
+
+        # Compile all patterns with error handling
+        self.patterns = []
+
+        # Compile default patterns
+        for pattern, message in self.DEFAULT_PATTERNS:
+            try:
+                compiled = re.compile(pattern)
+                self.patterns.append((compiled, message))
+            except re.error as e:
+                self.logger.error(f"Invalid default pattern '{pattern}': {e}")
+                raise ValueError(
+                    f"Invalid default pattern in ForbiddenPatternsCheck: '{pattern}'. "
+                    f"Regex error: {e}"
+                ) from e
+
+        # Compile custom patterns with error handling
+        if custom_patterns:
+            for pattern, message in custom_patterns:
+                try:
+                    compiled = re.compile(pattern)
+                    self.patterns.append((compiled, message))
+                except re.error as e:
+                    # Log error but skip invalid custom patterns
+                    self.logger.warning(
+                        f"Skipping invalid custom pattern for check '{name}': '{pattern}'. "
+                        f"Regex error: {e}"
+                    )
+                    # Continue with other patterns rather than failing completely
 
     async def run(self, context: CheckContext) -> CheckResult:
         """Search for forbidden secret patterns."""
@@ -461,20 +545,23 @@ class ForbiddenPatternsCheck(BaseCheck):
             if patch.filename not in context.filtered_files:
                 continue
 
+            # Parse patch to get actual line numbers
+            lines_with_numbers = parse_patch_lines_with_numbers(patch.patch)
+
             # Only check added lines (lines starting with +)
-            for i, line in enumerate(patch.patch.split('\n'), 1):
-                if not line.startswith('+'):
+            for line_content, line_number in lines_with_numbers:
+                if not line_content.startswith('+'):
                     continue
 
                 # Remove the + prefix
-                content = line[1:]
+                content = line_content[1:]
 
                 # Check all patterns
                 for pattern, message in self.patterns:
                     if pattern.search(content):
                         details.append(CheckDetail(
                             file_path=patch.filename,
-                            line_number=i,
+                            line_number=line_number,  # Actual file line number
                             message=message,
                             suggestion="Remove sensitive data and use environment variables or secret management"
                         ))
